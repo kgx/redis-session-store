@@ -116,7 +116,7 @@ class RedisSessionStore < ActionDispatch::Session::AbstractStore
   end
 
   def decode(data)
-    serializer.load(data)
+    serializer.load(data).try(:with_indifferent_access) || serializer.load(data)
   end
 
   def set_session(env, sid, session_data, options = nil)
@@ -173,7 +173,7 @@ class RedisSessionStore < ActionDispatch::Session::AbstractStore
     end
 
     def self.dump(value)
-      JSON.generate(value, quirks_mode: true).with_indifferent_access
+      JSON.generate(value, quirks_mode: true)
     end
   end
 
