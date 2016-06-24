@@ -97,26 +97,26 @@ class RedisSessionStore < ActionDispatch::Session::AbstractStore
       session = {}
     end
 
-    [sid, session]
+    [sid, session.with_indifferent_access]
   rescue Errno::ECONNREFUSED, Redis::CannotConnectError => e
     on_redis_down.call(e, env, sid) if on_redis_down
-    [generate_sid, {}]
+    [generate_sid, {}.with_indifferent_access]
   end
   alias_method :find_session, :get_session
 
   def load_session_from_redis(sid)
     data = redis.get(prefixed(sid))
     begin
-      data ? decode(data) : nil
+      decode(data).with_indifferent_access
     rescue => e
       destroy_session_from_sid(sid, drop: true)
       on_session_load_error.call(e, sid) if on_session_load_error
-      nil
+      {}.with_indifferent_access
     end
   end
 
   def decode(data)
-    serializer.load(data).try(:with_indifferent_access) || serializer.load(data)
+    serializer.load(data)
   end
 
   def set_session(env, sid, session_data, options = nil)
