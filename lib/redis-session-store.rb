@@ -173,7 +173,7 @@ class RedisSessionStore < ActionDispatch::Session::AbstractStore
     end
 
     def self.dump(value)
-      JSON.generate(value, quirks_mode: true)
+      JSON.generate(value, quirks_mode: true).with_indifferent_access
     end
   end
 
