@@ -1,4 +1,3 @@
-# vim:fileencoding=utf-8
 require 'json'
 
 describe RedisSessionStore do
@@ -184,7 +183,7 @@ describe RedisSessionStore do
       end
 
       context 'when :on_redis_down re-raises' do
-        before { store.on_redis_down = ->(e, *) { fail e } }
+        before { store.on_redis_down = ->(e, *) { raise e } }
 
         it 'explodes' do
           expect do
@@ -285,7 +284,7 @@ describe RedisSessionStore do
       end
 
       context 'when :on_redis_down re-raises' do
-        before { store.on_redis_down = ->(e, *) { fail e } }
+        before { store.on_redis_down = ->(e, *) { raise e } }
 
         it 'explodes' do
           expect do
@@ -325,7 +324,7 @@ describe RedisSessionStore do
         end
 
         context 'when :on_redis_down re-raises' do
-          before { store.on_redis_down = ->(e, *) { fail e } }
+          before { store.on_redis_down = ->(e, *) { raise e } }
 
           it 'explodes' do
             expect do
