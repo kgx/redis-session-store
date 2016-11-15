@@ -63,9 +63,15 @@ class RedisSessionStore < ActionDispatch::Session::AbstractStore
   def refactor_default_session
     n, ar = 0, []
     
-    # puts parsed JSON sessions into an array until it gets 10. does not use .try for randomkey, because
-    # if that fails, it means the database is empty, which SHOULD throw an error
-    ar << JSON.try(:parse, @redis.try(:get, @redis.randomkey)) until ar.length == 10
+    # puts parsed JSON sessions into an array until it gets 10
+    until ar.length == 10
+      begin
+        ar << JSON.parse(@redis.get(@redis.randomkey)) 
+      rescue JSON::ParserError => e
+        puts e
+      end
+    end
+
     ar.compact!
     raise "Not enough valid JSON sessions" if ar.length < 3
     @default_session = ar.inject {|i,e| (i.to_set - e.to_set).to_h}
