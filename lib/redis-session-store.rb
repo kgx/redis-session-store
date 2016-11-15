@@ -197,7 +197,7 @@ class RedisSessionStore < ActionDispatch::Session::AbstractStore
     end
 
     def self.dump(value)
-      JSON.generate((value.to_set - @default_session.to_set).to_h, quirks_mode: true)
+      JSON.generate((value.to_h.to_set - @default_session.to_set).to_h, quirks_mode: true)
     end
   end
 
