@@ -48,14 +48,14 @@ class RedisSessionStore < ActionDispatch::Session::AbstractStore
     @default_options.merge!(redis_options)
     @redis = redis_options[:client] || Redis.new(redis_options)
     @on_redis_down = options[:on_redis_down]
-    @serializer = determine_serializer(options[:serializer])
-    if @serializer == :jsmin
+    if options[:serializer] == :jsmin
       if File.exist?(DEFAULT_SESSION_PATH)
         @default_session = JSON.try(:parse, open(DEFAULT_SESSION_PATH).read)
       else
         refactor_default_session
       end
     end
+    @serializer = determine_serializer(options[:serializer])
     @on_session_load_error = options[:on_session_load_error]
     verify_handlers!
   end
