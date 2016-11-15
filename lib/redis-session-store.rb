@@ -1,9 +1,11 @@
 require 'redis'
+require 'set'
 
 # Redis session storage for Rails, and for Rails only. Derived from
 # the MemCacheStore code, simply dropping in Redis instead.
 class RedisSessionStore < ActionDispatch::Session::AbstractStore
   VERSION = '0.9.1'.freeze
+  DEFAULT_SESSION_PATH = "tmp/redis_session_default.json"
   # Rails 3.1 and beyond defines the constant elsewhere
   unless defined?(ENV_SESSION_OPTIONS_KEY)
     if Rack.release.split('.').first.to_i > 1
@@ -47,9 +49,29 @@ class RedisSessionStore < ActionDispatch::Session::AbstractStore
     @redis = redis_options[:client] || Redis.new(redis_options)
     @on_redis_down = options[:on_redis_down]
     @serializer = determine_serializer(options[:serializer])
+    if @serializer == :jsmin
+      if File.exist?(DEFAULT_SESSION_PATH)
+        @default_session = JSON.try(:parse, open(DEFAULT_SESSION_PATH).read)
+      else
+        refactor_default_session
+      end
+    end
     @on_session_load_error = options[:on_session_load_error]
     verify_handlers!
   end
+
+  def refactor_default_session
+    n, ar = 0, []
+    
+    # puts parsed JSON sessions into an array until it gets 10. does not use .try for randomkey, because
+    # if that fails, it means the database is empty, which SHOULD throw an error
+    ar << JSON.try(:parse, @redis.try(:get, @redis.randomkey)) until ar.length == 10
+    ar.compact!
+    raise "Not enough valid JSON sessions" if ar.length < 3
+    @default_session = ar.inject {|i,e| (i.to_set - e.to_set).to_h}
+    File.open(DEFAULT_SESSION_PATH, "w").write(@default_session)
+  end
+    
 
   attr_accessor :on_redis_down, :on_session_load_error
 
@@ -157,8 +179,25 @@ class RedisSessionStore < ActionDispatch::Session::AbstractStore
     case serializer
     when :marshal then Marshal
     when :json    then JsonSerializer
+    when :jsmin   then JsonMinimizer
     when :hybrid  then HybridSerializer
     else serializer
+    end
+  end
+
+  # Removes any key-value pairs that are set to their default values, when storing the session, then
+  # adds them back in when retrieving the session
+  class JsonMinimizer
+    def self.load(value)
+      if @default_session
+        @default_session.merge(JSON.parse(value, quirks_mode: true))
+      else
+        JSON.parse(value, quirks_mode: true)
+      end
+    end
+
+    def self.dump(value)
+      JSON.generate((value.to_set - @default_session.to_set).to_h, quirks_mode: true)
     end
   end
 
