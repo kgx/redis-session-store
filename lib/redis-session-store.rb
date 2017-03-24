@@ -127,6 +127,10 @@ class RedisSessionStore < ActionDispatch::Session::AbstractStore
   end
   alias find_session get_session
 
+  def get_ttl_from_redis(sid)
+    redis.ttl(prefixed(sid))
+  end
+
   def load_session_from_redis(sid)
     data = redis.get(prefixed(sid))
     begin
