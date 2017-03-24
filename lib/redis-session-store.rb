@@ -62,11 +62,11 @@ class RedisSessionStore < ActionDispatch::Session::AbstractStore
 
   def refactor_default_session
     n, ar = 0, []
-    
+
     # puts parsed JSON sessions into an array until it gets 10
     until ar.length == 10
       begin
-        ar << JSON.parse(@redis.get(@redis.randomkey)) 
+        ar << JSON.parse(@redis.get(@redis.randomkey))
       rescue JSON::ParserError => e
         puts e
       end
@@ -77,7 +77,7 @@ class RedisSessionStore < ActionDispatch::Session::AbstractStore
     @default_session = ar.inject {|i,e| (i.to_set - e.to_set).to_h}
     File.open(DEFAULT_SESSION_PATH, "w").write(@default_session)
   end
-    
+
 
   attr_accessor :on_redis_down, :on_session_load_error
 
@@ -143,6 +143,10 @@ class RedisSessionStore < ActionDispatch::Session::AbstractStore
   end
 
   def set_session(env, sid, session_data, options = nil)
+    if env['redis_session_store.readonly_access']
+      #simulate a successful write
+      return sid
+    end
     expiry = (options || env.fetch(ENV_SESSION_OPTIONS_KEY))[:expire_after]
     if expiry
       redis.setex(prefixed(sid), expiry, encode(session_data))
